@@ -54,13 +54,15 @@ def comic_info(num=''):
 
 def fetch():
     if not os.path.isfile('.UpdateLog'):
-        with shelve.open('.UpdateLog') as log:
-            log['Complete'] = None                              # None, True , False. True = No errors during download.
-            log['Record'] = 1                                   # Starts from comic #1
+        log = shelve.open('.UpdateLog')
+        log['Complete'] = None                              # None, True , False. True = No errors during download.
+        log['Record'] = 1                                   # Starts from comic #1
+        log.close()
 
-    with shelve.open('.UpdateLog') as log:
-        status = log['Complete']                                # Retrieve values from log file.
-        start = log['Record']
+    log = shelve.open('.UpdateLog')
+    status = log['Complete']                                # Retrieve values from log file.
+    start = log['Record']
+    log.close()
 
     end = comic_info()['num']
 
@@ -103,9 +105,10 @@ def downloader(num):
 
 
 def updatelog(pseudo_end):
-    with shelve.open('.UpdateLog') as log:
-        log['Complete'] = True
-        log['Record'] = pseudo_end
+    log = shelve.open('.UpdateLog')
+    log['Complete'] = True
+    log['Record'] = pseudo_end
+    log.close()
     print("\nLogs updated at Comic #", pseudo_end - 1, "\n")
 
 
@@ -117,8 +120,9 @@ def update():
     if status is False:                                             # Give warning if there was error last time.
         print("Program ended unexpectedly during last attempt. Some of the downloaded data will be overwritten.")
 
-    with shelve.open('.UpdateLog') as log:
-        log['Complete'] = False                                     # Remains false if program exits unexpectedly.
+    log = shelve.open('.UpdateLog')
+    log['Complete'] = False                                     # Remains false if program exits unexpectedly.
+    log.close()
 
     pack = 100                                                      # will download in pack of 100 comics at a time.
     loop = True
@@ -135,8 +139,9 @@ def update():
             loop = False
 
         # "I/O bound process can have more processes than cores. Don't worry!
-        with Pool(processes=32) as pool:       # spawns 32 processes for parallel download.
-            pool.map(downloader, range(start, pseudo_end))
+        pool = Pool(processes=32)       # spawns 32 processes for parallel download.
+        pool.map(downloader, range(start, pseudo_end))
+        pool.close()
 
         updatelog(pseudo_end)
 
@@ -189,15 +194,17 @@ def main():
 
     elif result.select:
         print("Starting download...\n")
-        with Pool(processes=3) as pool:       # spawns only 3 processes for parallel download.
-            pool.map(downloader, [x for x in result.select if x > 0])
+        pool = Pool(processes=3)       # spawns only 3 processes for parallel download.
+        pool.map(downloader, [x for x in result.select if x > 0])
+        pool.close()
         print("Done.")
 
     elif result.bounds:
         if result.bounds[1] > result.bounds[0] > 0:
             print("Starting download...\n")
-            with Pool(processes=8) as pool:       # spawns only 8 processes for parallel download.
-                pool.map(downloader, range(result.bounds[0], result.bounds[1]+1))
+            pool = Pool(processes=8)       # spawns only 8 processes for parallel download.
+            pool.map(downloader, range(result.bounds[0], result.bounds[1]+1))
+            pool.close()
             print("Done.")
 
         else:
